@@ -1,11 +1,11 @@
-table "av_maintenance_log" {
+table "maintenance_log" {
   auth = false
 
   schema {
     int id
     timestamp created_at?=now
     int asset_id {
-      table = "av_asset"
+      table = "asset"
     }
     int performed_by? {
       table = "user"

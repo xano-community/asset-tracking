@@ -1,6 +1,6 @@
 // Update an asset's mutable fields
 query "assets/{asset_id}" verb=PATCH {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -49,7 +49,7 @@ query "assets/{asset_id}" verb=PATCH {
       }
     }
 
-    db.patch "av_asset" {
+    db.patch "asset" {
       field_name = "id"
       field_value = $input.asset_id
       data = $updates

@@ -1,6 +1,6 @@
 // Get an asset with category, location, and current assignee
 query "assets/{asset_id}" verb=GET {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -8,7 +8,7 @@ query "assets/{asset_id}" verb=GET {
   }
 
   stack {
-    db.get "av_asset" {
+    db.get "asset" {
       field_name = "id"
       field_value = $input.asset_id
     } as $asset
@@ -18,12 +18,12 @@ query "assets/{asset_id}" verb=GET {
       error = "Asset not found"
     }
 
-    db.get "av_category" {
+    db.get "asset_category" {
       field_name = "id"
       field_value = $asset.category_id
     } as $category
 
-    db.get "av_location" {
+    db.get "location" {
       field_name = "id"
       field_value = $asset.location_id
     } as $location

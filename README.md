@@ -1,6 +1,6 @@
-# AssetVault
+# Asset Tracking
 
-Enterprise IT asset management built on Xano. Backend is XanoScript you push to your own Xano instance; frontend is a single-file HTML app that asks for your instance's base URL the first time it loads.
+An IT asset-tracking app built on Xano. Backend is XanoScript you push to your own Xano instance; frontend is a single-file HTML app that asks for your instance's base URL the first time it loads.
 
 Assets (laptops, monitors, phones, servers, network gear) are tagged, categorized, located, and optionally assigned to users. Every assignment is logged with `assigned_at` / `returned_at`, so you get a full custody chain per device. Maintenance events (repairs, upgrades, cost) are logged per asset.
 
@@ -9,11 +9,11 @@ Assets (laptops, monitors, phones, servers, network gear) are tagged, categorize
 ```
 backend/            # XanoScript — push to your Xano workspace
   workspace/
-  table/            # user, av_asset, av_category, av_location,
-                    # av_assignment, av_maintenance_log
+  table/            # user, asset, asset_category, location,
+                    # asset_assignment, maintenance_log
   api/
     enterprise_auth/  # signup, login, me, users
-    assetvault/       # assets, categories, locations, stats, seed
+    assets/           # assets, categories, locations, stats, seed
 frontend/
   index.html        # single-file static app
 ```
@@ -30,12 +30,12 @@ cd backend
 xano workspace:push
 ```
 
-This creates 6 tables and two API groups (`EnterpriseAuth` and `AssetVault`) in your workspace.
+This creates 6 tables and two API groups (`EnterpriseAuth` and `Assets`) in your workspace.
 
 ### 2. Seed demo data
 
 ```bash
-curl -X POST https://YOUR-INSTANCE.n7d.xano.io/api:assetvault/seed \
+curl -X POST https://YOUR-INSTANCE.n7d.xano.io/api:asset-tracking/seed \
   -d '{}' -H 'Content-Type: application/json'
 ```
 
@@ -55,7 +55,7 @@ On first load the page asks for your **Xano base URL** (e.g. `https://xxsw-1d5c-
 
 - Browse assets with filters for status, category, location, and name search
 - Drill into an asset to see current assignee, full assignment history, and maintenance log
-- **Assign** an available asset to a user (creates an `av_assignment` row and flips the asset's status to `assigned`)
+- **Assign** an available asset to a user (creates an `asset_assignment` row and flips the asset's status to `assigned`)
 - **Return** an assigned asset (closes the open assignment row and flips status back to `available`)
 - Log a maintenance event with a cost
 - Dashboard counts (total / available / assigned / in_repair / retired)
@@ -70,29 +70,29 @@ POST   /api:enterprise-auth/login          { email, password }
 GET    /api:enterprise-auth/me
 GET    /api:enterprise-auth/users
 
-POST   /api:assetvault/seed
-GET    /api:assetvault/assets              ?status&category_id&location_id&assigned_to&q&page&per_page
-POST   /api:assetvault/assets
-GET    /api:assetvault/assets/{id}
-PATCH  /api:assetvault/assets/{id}
-POST   /api:assetvault/assets/{id}/assign  { user_id, notes? }
-POST   /api:assetvault/assets/{id}/return  { notes? }
-GET    /api:assetvault/assets/{id}/assignments
-GET    /api:assetvault/assets/{id}/maintenance
-POST   /api:assetvault/assets/{id}/maintenance  { description, cost? }
-GET    /api:assetvault/categories
-GET    /api:assetvault/locations
-GET    /api:assetvault/stats/dashboard
+POST   /api:asset-tracking/seed
+GET    /api:asset-tracking/assets              ?status&category_id&location_id&assigned_to&q&page&per_page
+POST   /api:asset-tracking/assets
+GET    /api:asset-tracking/assets/{id}
+PATCH  /api:asset-tracking/assets/{id}
+POST   /api:asset-tracking/assets/{id}/assign  { user_id, notes? }
+POST   /api:asset-tracking/assets/{id}/return  { notes? }
+GET    /api:asset-tracking/assets/{id}/assignments
+GET    /api:asset-tracking/assets/{id}/maintenance
+POST   /api:asset-tracking/assets/{id}/maintenance  { description, cost? }
+GET    /api:asset-tracking/categories
+GET    /api:asset-tracking/locations
+GET    /api:asset-tracking/stats/dashboard
 ```
 
 ## Schema
 
 - **`user`** — id, name, email (unique), password, created_at — shared auth table with `auth = true`
-- **`av_asset`** — id, asset_tag (unique), name, manufacturer, model, serial_number, status, category_id, location_id, assigned_to → user, purchase_date, purchase_cost
-- **`av_category`** — id, name (unique), description
-- **`av_location`** — id, name (unique), address, city, country
-- **`av_assignment`** — id, asset_id, user_id, assigned_at, returned_at, notes
-- **`av_maintenance_log`** — id, asset_id, performed_by → user, description, cost, performed_at
+- **`asset`** — id, asset_tag (unique), name, manufacturer, model, serial_number, status, category_id, location_id, assigned_to → user, purchase_date, purchase_cost
+- **`asset_category`** — id, name (unique), description
+- **`location`** — id, name (unique), address, city, country
+- **`asset_assignment`** — id, asset_id, user_id, assigned_at, returned_at, notes
+- **`maintenance_log`** — id, asset_id, performed_by → user, description, cost, performed_at
 
 ## License
 

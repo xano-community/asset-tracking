@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AssetVault</title>
+<title>Asset Tracking</title>
 <style>
   :root {
     --brand: #059669;
@@ -60,14 +60,14 @@
 </head>
 <body>
 <header>
-  <h1>AssetVault</h1>
+  <h1>Asset Tracking</h1>
   <div id="user-area"></div>
 </header>
 <div class="container" id="app"></div>
 
 <script>
-const DEFAULT_CFG = { baseUrl: '', authCanonical: 'enterprise-auth', appCanonical: 'assetvault' };
-const LS = { cfg: 'av:config', token: 'av:token', user: 'av:user' };
+const DEFAULT_CFG = { baseUrl: '', authCanonical: 'enterprise-auth', appCanonical: 'asset-tracking' };
+const LS = { cfg: 'assets:config', token: 'assets:token', user: 'assets:user' };
 
 function getCfg() { const r = localStorage.getItem(LS.cfg); return r ? JSON.parse(r) : null; }
 function saveCfg(c) { localStorage.setItem(LS.cfg, JSON.stringify(c)); }
@@ -98,7 +98,7 @@ function renderSetup() {
   document.getElementById('app').innerHTML = `
     <div class="card" style="max-width:520px;margin:2rem auto">
       <h2 style="margin-top:0">Configure your Xano instance</h2>
-      <p class="muted">Enter the base URL of the Xano instance where you pushed AssetVault's backend.</p>
+      <p class="muted">Enter the base URL of the Xano instance where you pushed Asset Tracking's backend.</p>
       <label>Base URL</label>
       <input id="base-url" value="${e.baseUrl}" placeholder="https://your-instance.xano.io">
       <details style="margin-top:1rem">

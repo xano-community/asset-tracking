@@ -1,6 +1,6 @@
 // List assets with filtering and pagination
 query "assets" verb=GET {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -14,8 +14,8 @@ query "assets" verb=GET {
   }
 
   stack {
-    db.query "av_asset" {
-      where = $db.av_asset.status ==? $input.status && $db.av_asset.category_id ==? $input.category_id && $db.av_asset.location_id ==? $input.location_id && $db.av_asset.assigned_to ==? $input.assigned_to && $db.av_asset.name includes? $input.q
+    db.query "asset" {
+      where = $db.asset.status ==? $input.status && $db.asset.category_id ==? $input.category_id && $db.asset.location_id ==? $input.location_id && $db.asset.assigned_to ==? $input.assigned_to && $db.asset.name includes? $input.q
       sort = {created_at: "desc"}
       return = {
         type: "list",

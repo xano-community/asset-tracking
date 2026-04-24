@@ -1,6 +1,6 @@
 // Log maintenance on an asset
 query "assets/{asset_id}/maintenance" verb=POST {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -10,7 +10,7 @@ query "assets/{asset_id}/maintenance" verb=POST {
   }
 
   stack {
-    db.add "av_maintenance_log" {
+    db.add "maintenance_log" {
       data = {
         asset_id     : $input.asset_id,
         performed_by : $auth.id,

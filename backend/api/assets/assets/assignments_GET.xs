@@ -1,6 +1,6 @@
 // Get assignment history for an asset
 query "assets/{asset_id}/assignments" verb=GET {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -8,8 +8,8 @@ query "assets/{asset_id}/assignments" verb=GET {
   }
 
   stack {
-    db.query "av_assignment" {
-      where = $db.av_assignment.asset_id == $input.asset_id
+    db.query "asset_assignment" {
+      where = $db.asset_assignment.asset_id == $input.asset_id
       sort = {assigned_at: "desc"}
     } as $assignments
 

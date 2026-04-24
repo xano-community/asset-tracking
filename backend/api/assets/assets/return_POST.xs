@@ -1,6 +1,6 @@
 // Return an asset (closes active assignment, updates asset to available)
 query "assets/{asset_id}/return" verb=POST {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -9,7 +9,7 @@ query "assets/{asset_id}/return" verb=POST {
   }
 
   stack {
-    db.get "av_asset" {
+    db.get "asset" {
       field_name = "id"
       field_value = $input.asset_id
     } as $asset
@@ -19,14 +19,14 @@ query "assets/{asset_id}/return" verb=POST {
       error = "Asset not found"
     }
 
-    db.query "av_assignment" {
-      where = $db.av_assignment.asset_id == $input.asset_id && $db.av_assignment.returned_at == null
+    db.query "asset_assignment" {
+      where = $db.asset_assignment.asset_id == $input.asset_id && $db.asset_assignment.returned_at == null
       return = {type: "single"}
     } as $active_assignment
 
     conditional {
       if ($active_assignment != null) {
-        db.edit "av_assignment" {
+        db.edit "asset_assignment" {
           field_name = "id"
           field_value = $active_assignment.id
           data = {
@@ -37,7 +37,7 @@ query "assets/{asset_id}/return" verb=POST {
       }
     }
 
-    db.edit "av_asset" {
+    db.edit "asset" {
       field_name = "id"
       field_value = $input.asset_id
       data = {

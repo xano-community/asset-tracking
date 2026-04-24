@@ -1,6 +1,6 @@
 // Assign an asset to a user (creates assignment record, updates asset)
 query "assets/{asset_id}/assign" verb=POST {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -10,7 +10,7 @@ query "assets/{asset_id}/assign" verb=POST {
   }
 
   stack {
-    db.get "av_asset" {
+    db.get "asset" {
       field_name = "id"
       field_value = $input.asset_id
     } as $asset
@@ -25,7 +25,7 @@ query "assets/{asset_id}/assign" verb=POST {
       error = "Asset is not available for assignment"
     }
 
-    db.add "av_assignment" {
+    db.add "asset_assignment" {
       data = {
         asset_id   : $input.asset_id,
         user_id    : $input.user_id,
@@ -34,7 +34,7 @@ query "assets/{asset_id}/assign" verb=POST {
       }
     } as $assignment
 
-    db.edit "av_asset" {
+    db.edit "asset" {
       field_name = "id"
       field_value = $input.asset_id
       data = {

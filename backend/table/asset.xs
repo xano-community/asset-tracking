@@ -1,4 +1,4 @@
-table "av_asset" {
+table "asset" {
   auth = false
 
   schema {
@@ -15,10 +15,10 @@ table "av_asset" {
       values = ["available", "assigned", "in_repair", "retired", "lost"]
     }
     int category_id? {
-      table = "av_category"
+      table = "asset_category"
     }
     int location_id? {
-      table = "av_location"
+      table = "location"
     }
     int assigned_to? {
       table = "user"

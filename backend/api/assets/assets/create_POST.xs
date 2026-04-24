@@ -1,6 +1,6 @@
 // Create a new asset
 query "assets" verb=POST {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -17,8 +17,8 @@ query "assets" verb=POST {
   }
 
   stack {
-    db.query "av_asset" {
-      where = $db.av_asset.asset_tag == $input.asset_tag
+    db.query "asset" {
+      where = $db.asset.asset_tag == $input.asset_tag
       return = {type: "exists"}
     } as $exists
 
@@ -27,7 +27,7 @@ query "assets" verb=POST {
       error = "Asset tag already in use"
     }
 
-    db.add "av_asset" {
+    db.add "asset" {
       data = {
         asset_tag     : $input.asset_tag,
         name          : $input.name,

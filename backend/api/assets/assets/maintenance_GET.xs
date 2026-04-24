@@ -1,6 +1,6 @@
 // Get maintenance history for an asset
 query "assets/{asset_id}/maintenance" verb=GET {
-  api_group = "AssetVault"
+  api_group = "Assets"
   auth = "user"
 
   input {
@@ -8,8 +8,8 @@ query "assets/{asset_id}/maintenance" verb=GET {
   }
 
   stack {
-    db.query "av_maintenance_log" {
-      where = $db.av_maintenance_log.asset_id == $input.asset_id
+    db.query "maintenance_log" {
+      where = $db.maintenance_log.asset_id == $input.asset_id
       sort = {performed_at: "desc"}
     } as $logs
   }

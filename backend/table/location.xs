@@ -1,4 +1,4 @@
-table "av_location" {
+table "location" {
   auth = false
 
   schema {

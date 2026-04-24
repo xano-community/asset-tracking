@@ -1,11 +1,11 @@
-table "av_assignment" {
+table "asset_assignment" {
   auth = false
 
   schema {
     int id
     timestamp created_at?=now
     int asset_id {
-      table = "av_asset"
+      table = "asset"
     }
     int user_id {
       table = "user"

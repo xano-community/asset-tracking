@@ -1,11 +1,11 @@
 // List locations
 query "locations" verb=GET {
-  api_group = "AssetVault"
+  api_group = "Assets"
 
   input {}
 
   stack {
-    db.query "av_location" {
+    db.query "location" {
       sort = {name: "asc"}
     } as $locations
   }

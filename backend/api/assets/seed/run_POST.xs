@@ -1,17 +1,17 @@
-// Seed AssetVault with realistic demo data. Idempotent.
+// Seed Asset Tracking with realistic demo data. Idempotent.
 query "seed" verb=POST {
-  api_group = "AssetVault"
+  api_group = "Assets"
 
   input {}
 
   stack {
-    db.query "av_asset" {
+    db.query "asset" {
       return = {type: "count"}
     } as $existing_assets
 
     precondition ($existing_assets == 0) {
       error_type = "inputerror"
-      error = "AssetVault data already seeded."
+      error = "Asset Tracking data already seeded."
     }
 
     var $seed_users {
@@ -58,14 +58,14 @@ query "seed" verb=POST {
 
     foreach ($categories) {
       each as $c {
-        db.get "av_category" {
+        db.get "asset_category" {
           field_name = "name"
           field_value = $c.name
         } as $existing
 
         conditional {
           if ($existing == null) {
-            db.add "av_category" {
+            db.add "asset_category" {
               data = {name: $c.name, description: $c.description}
             }
           }
@@ -85,14 +85,14 @@ query "seed" verb=POST {
 
     foreach ($locations) {
       each as $l {
-        db.get "av_location" {
+        db.get "location" {
           field_name = "name"
           field_value = $l.name
         } as $existing
 
         conditional {
           if ($existing == null) {
-            db.add "av_location" {
+            db.add "location" {
               data = {name: $l.name, address: $l.address, city: $l.city, country: $l.country}
             }
           }
@@ -129,12 +129,12 @@ query "seed" verb=POST {
 
     foreach ($asset_seeds) {
       each as $a {
-        db.get "av_category" {
+        db.get "asset_category" {
           field_name = "name"
           field_value = $a.cat
         } as $category
 
-        db.get "av_location" {
+        db.get "location" {
           field_name = "name"
           field_value = $a.loc
         } as $location
@@ -154,7 +154,7 @@ query "seed" verb=POST {
           }
         }
 
-        db.add "av_asset" {
+        db.add "asset" {
           data = {
             asset_tag    : $a.tag,
             name         : $a.name,
@@ -171,7 +171,7 @@ query "seed" verb=POST {
 
         conditional {
           if ($a.status == "assigned" && $owner_id != null) {
-            db.add "av_assignment" {
+            db.add "asset_assignment" {
               data = {
                 asset_id   : $asset.id,
                 user_id    : $owner_id,

@@ -1,4 +1,4 @@
-table "av_category" {
+table "asset_category" {
   auth = false
 
   schema {
