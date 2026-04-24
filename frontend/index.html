@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AssetVault</title>
+<style>
+  :root {
+    --brand: #059669;
+    --brand-hover: #047857;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --available: #059669;
+    --assigned: #2563eb;
+    --in_repair: #ca8a04;
+    --retired: #6b7280;
+    --lost: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--brand); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 1.25rem; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+  .btn { background: var(--brand); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+  .btn:hover { background: var(--brand-hover); }
+  .btn.secondary { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .btn.danger { background: #dc2626; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  input, textarea, select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+  textarea { min-height: 80px; resize: vertical; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.25rem; margin-top: 0.75rem; font-weight: 500; }
+  .row { display: flex; gap: 1rem; }
+  .row > * { flex: 1; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .stat .num { font-size: 2rem; font-weight: 700; }
+  .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr { cursor: pointer; }
+  tr:hover { background: #f9fafb; }
+  .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; color: white; }
+  .hidden { display: none; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100; }
+  .modal { background: white; border-radius: 8px; padding: 2rem; max-width: 640px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 0.75rem; border-radius: 6px; margin: 1rem 0; font-size: 0.9rem; }
+  .muted { color: var(--muted); }
+  .flex { display: flex; gap: 0.5rem; align-items: center; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 0.75rem; margin-bottom: 1rem; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 0.5rem 1rem; font-size: 0.9rem; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AssetVault</h1>
+  <div id="user-area"></div>
+</header>
+<div class="container" id="app"></div>
+
+<script>
+const DEFAULT_CFG = { baseUrl: '', authCanonical: 'enterprise-auth', appCanonical: 'assetvault' };
+const LS = { cfg: 'av:config', token: 'av:token', user: 'av:user' };
+
+function getCfg() { const r = localStorage.getItem(LS.cfg); return r ? JSON.parse(r) : null; }
+function saveCfg(c) { localStorage.setItem(LS.cfg, JSON.stringify(c)); }
+function getToken() { return localStorage.getItem(LS.token); }
+function setToken(t) { localStorage.setItem(LS.token, t); }
+function clearAuth() { localStorage.removeItem(LS.token); localStorage.removeItem(LS.user); }
+function getUser() { const r = localStorage.getItem(LS.user); return r ? JSON.parse(r) : null; }
+function setUser(u) { localStorage.setItem(LS.user, JSON.stringify(u)); }
+function normalizeBase(url) { return url.trim().replace(/\/+$/, ''); }
+
+async function api(path, opts = {}) {
+  const cfg = getCfg();
+  if (!cfg) throw new Error('Not configured');
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const token = getToken();
+  if (token) headers.Authorization = 'Bearer ' + token;
+  const res = await fetch(`${cfg.baseUrl}${path}`, { ...opts, headers });
+  const text = await res.text();
+  let data; try { data = JSON.parse(text); } catch { data = text; }
+  if (!res.ok) throw new Error((data && (data.message || data.error)) || `HTTP ${res.status}`);
+  return data;
+}
+function appApi(p, opts) { return api(`/api:${getCfg().appCanonical}${p}`, opts); }
+function authApi(p, opts) { return api(`/api:${getCfg().authCanonical}${p}`, opts); }
+
+function renderSetup() {
+  const e = getCfg() || DEFAULT_CFG;
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="max-width:520px;margin:2rem auto">
+      <h2 style="margin-top:0">Configure your Xano instance</h2>
+      <p class="muted">Enter the base URL of the Xano instance where you pushed AssetVault's backend.</p>
+      <label>Base URL</label>
+      <input id="base-url" value="${e.baseUrl}" placeholder="https://your-instance.xano.io">
+      <details style="margin-top:1rem">
+        <summary class="muted" style="cursor:pointer;font-size:0.85rem">Advanced: canonicals</summary>
+        <label>Auth canonical</label>
+        <input id="auth-canonical" value="${e.authCanonical}">
+        <label>App canonical</label>
+        <input id="app-canonical" value="${e.appCanonical}">
+      </details>
+      <div id="setup-error"></div>
+      <button class="btn" style="margin-top:1rem;width:100%" onclick="saveSetup()">Save & Continue</button>
+    </div>
+  `;
+}
+window.saveSetup = function() {
+  const baseUrl = normalizeBase(document.getElementById('base-url').value);
+  if (!baseUrl) return document.getElementById('setup-error').innerHTML = '<div class="error">Base URL required</div>';
+  saveCfg({ baseUrl, authCanonical: document.getElementById('auth-canonical').value.trim(), appCanonical: document.getElementById('app-canonical').value.trim() });
+  route();
+};
+window.clearCfg = function() { localStorage.removeItem(LS.cfg); clearAuth(); route(); };
+
+function renderLogin() {
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="max-width:420px;margin:2rem auto">
+      <h2 style="margin-top:0">Sign in</h2>
+      <label>Email</label>
+      <input id="login-email" value="alice.johnson@acme.enterprise">
+      <label>Password</label>
+      <input id="login-password" type="password" value="DemoPass1">
+      <div id="login-error"></div>
+      <button class="btn" style="margin-top:1rem;width:100%" onclick="doLogin()">Sign in</button>
+      <p class="muted" style="margin-top:1rem;font-size:0.85rem;text-align:center"><a href="#" onclick="event.preventDefault();renderSignup()">Create account</a> · <a href="#" onclick="event.preventDefault();clearCfg()">Reconfigure</a></p>
+    </div>
+  `;
+}
+window.doLogin = async function() {
+  try {
+    const res = await authApi('/login', { method: 'POST', body: JSON.stringify({ email: document.getElementById('login-email').value, password: document.getElementById('login-password').value }) });
+    setToken(res.authToken); setUser(res.user); route();
+  } catch (e) { document.getElementById('login-error').innerHTML = `<div class="error">${e.message}</div>`; }
+};
+
+function renderSignup() {
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="max-width:420px;margin:2rem auto">
+      <h2 style="margin-top:0">Create account</h2>
+      <label>Name</label><input id="su-name">
+      <label>Email</label><input id="su-email" type="email">
+      <label>Password</label><input id="su-password" type="password">
+      <div id="signup-error"></div>
+      <button class="btn" style="margin-top:1rem;width:100%" onclick="doSignup()">Sign up</button>
+      <p class="muted" style="margin-top:1rem;font-size:0.85rem;text-align:center"><a href="#" onclick="event.preventDefault();renderLogin()">Back to sign in</a></p>
+    </div>
+  `;
+}
+window.doSignup = async function() {
+  try {
+    const res = await authApi('/signup', { method: 'POST', body: JSON.stringify({ name: document.getElementById('su-name').value, email: document.getElementById('su-email').value, password: document.getElementById('su-password').value }) });
+    setToken(res.authToken); setUser(res.user); route();
+  } catch (e) { document.getElementById('signup-error').innerHTML = `<div class="error">${e.message}</div>`; }
+};
+
+async function renderDashboard() {
+  const user = getUser();
+  document.getElementById('user-area').innerHTML = `<span style="margin-right:1rem">${user ? (user.name || user.email) : ''}</span><button class="btn secondary" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.3);color:white" onclick="logout()">Sign out</button>`;
+  document.getElementById('app').innerHTML = `<div id="stats-wrap"></div><div id="content"><div class="card">Loading…</div></div>`;
+
+  const f = state.filters;
+  try {
+    const qs = new URLSearchParams({ page: state.page, per_page: 20 });
+    if (f.status) qs.set('status', f.status);
+    if (f.category_id) qs.set('category_id', f.category_id);
+    if (f.location_id) qs.set('location_id', f.location_id);
+    if (f.q) qs.set('q', f.q);
+    const [stats, assets, cats, locs] = await Promise.all([
+      appApi('/stats/dashboard'),
+      appApi(`/assets?${qs}`),
+      appApi('/categories'),
+      appApi('/locations')
+    ]);
+    document.getElementById('stats-wrap').innerHTML = `
+      <div class="stats">
+        <div class="stat"><div class="num">${stats.total}</div><div class="label">Total</div></div>
+        <div class="stat"><div class="num" style="color:var(--available)">${stats.available}</div><div class="label">Available</div></div>
+        <div class="stat"><div class="num" style="color:var(--assigned)">${stats.assigned}</div><div class="label">Assigned</div></div>
+        <div class="stat"><div class="num" style="color:var(--in_repair)">${stats.in_repair}</div><div class="label">In Repair</div></div>
+        <div class="stat"><div class="num" style="color:var(--retired)">${stats.retired}</div><div class="label">Retired</div></div>
+      </div>`;
+    const catOpts = cats.map(c => `<option value="${c.id}" ${f.category_id==c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+    const locOpts = locs.map(l => `<option value="${l.id}" ${f.location_id==l.id?'selected':''}>${escapeHtml(l.name)}</option>`).join('');
+    const rows = assets.items.map(a => `
+      <tr onclick="showAsset(${a.id})">
+        <td><strong>${escapeHtml(a.asset_tag)}</strong></td>
+        <td>${escapeHtml(a.name)}</td>
+        <td>${escapeHtml(a.manufacturer || '')} ${escapeHtml(a.model || '')}</td>
+        <td><span class="badge" style="background:var(--${a.status})">${a.status.replace('_',' ')}</span></td>
+        <td>$${formatMoney(a.purchase_cost)}</td>
+      </tr>
+    `).join('');
+    document.getElementById('content').innerHTML = `
+      <div class="flex-between" style="margin-bottom:1rem"><h2 style="margin:0">Assets</h2><button class="btn" onclick="showNewAsset()">New Asset</button></div>
+      <div class="card" style="padding:1rem">
+        <div class="filters">
+          <input id="f-q" value="${f.q || ''}" placeholder="Search by name…" onkeydown="if(event.key==='Enter')applyFilters()">
+          <select id="f-status" onchange="applyFilters()">
+            <option value="">All statuses</option>
+            ${['available','assigned','in_repair','retired','lost'].map(s=>`<option value="${s}" ${f.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
+          </select>
+          <select id="f-category" onchange="applyFilters()"><option value="">All categories</option>${catOpts}</select>
+          <select id="f-location" onchange="applyFilters()"><option value="">All locations</option>${locOpts}</select>
+          <button class="btn secondary" onclick="clearFilters()">Clear</button>
+        </div>
+        <table>
+          <thead><tr><th>Tag</th><th>Name</th><th>Make/Model</th><th>Status</th><th>Cost</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan=5 class=muted style="text-align:center;padding:2rem">No assets</td></tr>'}</tbody>
+        </table>
+        ${assets.pageTotal > 1 ? `<div class="flex-between" style="margin-top:1rem"><span class="muted">Page ${assets.curPage}/${assets.pageTotal} · ${assets.itemsTotal} total</span><div class="flex"><button class="btn secondary" ${!assets.prevPage?'disabled':''} onclick="changePage(${assets.curPage-1})">Prev</button><button class="btn secondary" ${!assets.nextPage?'disabled':''} onclick="changePage(${assets.curPage+1})">Next</button></div></div>` : ''}
+      </div>
+    `;
+  } catch (e) { document.getElementById('content').innerHTML = `<div class="error">${e.message}</div>`; }
+}
+window.applyFilters = function() {
+  state.filters = {
+    q: document.getElementById('f-q').value,
+    status: document.getElementById('f-status').value,
+    category_id: document.getElementById('f-category').value,
+    location_id: document.getElementById('f-location').value
+  };
+  state.page = 1; renderDashboard();
+};
+window.clearFilters = function() { state.filters = {}; state.page = 1; renderDashboard(); };
+window.changePage = function(p) { state.page = p; renderDashboard(); };
+
+window.showNewAsset = async function() {
+  const [cats, locs] = await Promise.all([appApi('/categories'), appApi('/locations')]);
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `
+    <div class="modal">
+      <h2 style="margin-top:0">New Asset</h2>
+      <div class="row"><div><label>Asset Tag</label><input id="n-tag" placeholder="LT-123"></div><div><label>Name</label><input id="n-name"></div></div>
+      <div class="row"><div><label>Manufacturer</label><input id="n-man"></div><div><label>Model</label><input id="n-model"></div></div>
+      <div class="row"><div><label>Category</label><select id="n-cat"><option value="">—</option>${cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></div><div><label>Location</label><select id="n-loc"><option value="">—</option>${locs.map(l=>`<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')}</select></div></div>
+      <div class="row"><div><label>Serial #</label><input id="n-serial"></div><div><label>Cost (USD)</label><input id="n-cost" type="number" step="0.01"></div></div>
+      <div id="n-error"></div>
+      <div class="flex" style="justify-content:flex-end;margin-top:1rem">
+        <button class="btn secondary" onclick="this.closest('.modal-backdrop').remove()">Cancel</button>
+        <button class="btn" onclick="submitNewAsset(this)">Create</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+};
+window.submitNewAsset = async function(btn) {
+  const m = btn.closest('.modal-backdrop');
+  const body = {
+    asset_tag: m.querySelector('#n-tag').value,
+    name: m.querySelector('#n-name').value,
+    manufacturer: m.querySelector('#n-man').value,
+    model: m.querySelector('#n-model').value,
+    serial_number: m.querySelector('#n-serial').value
+  };
+  const cat = m.querySelector('#n-cat').value; if (cat) body.category_id = parseInt(cat);
+  const loc = m.querySelector('#n-loc').value; if (loc) body.location_id = parseInt(loc);
+  const cost = m.querySelector('#n-cost').value; if (cost) body.purchase_cost = parseFloat(cost);
+  try {
+    await appApi('/assets', { method: 'POST', body: JSON.stringify(body) });
+    m.remove(); renderDashboard();
+  } catch (e) { m.querySelector('#n-error').innerHTML = `<div class="error">${e.message}</div>`; }
+};
+
+window.showAsset = async function(id) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `<div class="modal">Loading…</div>`;
+  document.body.appendChild(modal);
+  try {
+    const [a, assigns, maint, users] = await Promise.all([
+      appApi(`/assets/${id}`),
+      appApi(`/assets/${id}/assignments`),
+      appApi(`/assets/${id}/maintenance`),
+      authApi('/users')
+    ]);
+    const userOpts = users.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+    modal.querySelector('.modal').innerHTML = `
+      <div class="flex-between">
+        <h2 style="margin:0">${escapeHtml(a.asset_tag)} · ${escapeHtml(a.name)}</h2>
+        <button class="btn secondary" onclick="this.closest('.modal-backdrop').remove()">Close</button>
+      </div>
+      <div style="margin:0.5rem 0 1rem"><span class="badge" style="background:var(--${a.status})">${a.status.replace('_',' ')}</span></div>
+      <dl class="kv">
+        <dt>Manufacturer</dt><dd>${escapeHtml(a.manufacturer || '—')}</dd>
+        <dt>Model</dt><dd>${escapeHtml(a.model || '—')}</dd>
+        <dt>Category</dt><dd>${a.category ? escapeHtml(a.category.name) : '—'}</dd>
+        <dt>Location</dt><dd>${a.location ? escapeHtml(a.location.name) : '—'}</dd>
+        <dt>Assigned to</dt><dd>${a.assignee && a.assignee.id ? escapeHtml(a.assignee.name) : '— Unassigned —'}</dd>
+        <dt>Purchase cost</dt><dd>$${formatMoney(a.purchase_cost)}</dd>
+      </dl>
+      <h3 style="margin-top:1.5rem">Actions</h3>
+      ${a.status === 'available' ? `
+        <div class="row">
+          <div><label>Assign to</label><select id="assign-user"><option value="">—</option>${userOpts}</select></div>
+          <div><label>Notes</label><input id="assign-notes" placeholder="Deployment notes"></div>
+        </div>
+        <button class="btn" style="margin-top:0.5rem" onclick="assignAsset(${id}, this)">Assign</button>
+      ` : a.status === 'assigned' ? `
+        <div><label>Return notes</label><input id="return-notes" placeholder="Condition on return"></div>
+        <button class="btn" style="margin-top:0.5rem" onclick="returnAsset(${id}, this)">Mark returned</button>
+      ` : ''}
+      <h3 style="margin-top:1.5rem">Assignment history</h3>
+      ${assigns.length ? assigns.map(x => `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem"><strong>${x.user ? escapeHtml(x.user.name) : 'Unknown'}</strong> · ${formatDate(x.assigned_at)} → ${x.returned_at ? formatDate(x.returned_at) : '<span class="muted">active</span>'}</div>`).join('') : '<p class="muted">No history</p>'}
+      <h3 style="margin-top:1.5rem">Maintenance log</h3>
+      <div class="row"><div><label>Description</label><input id="m-desc"></div><div><label>Cost</label><input id="m-cost" type="number" step="0.01"></div></div>
+      <button class="btn" style="margin-top:0.5rem" onclick="logMaintenance(${id}, this)">Log entry</button>
+      <div style="margin-top:1rem">
+        ${maint.length ? maint.map(x => `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem">${formatDate(x.performed_at)} · ${escapeHtml(x.description)} · $${formatMoney(x.cost)}</div>`).join('') : '<p class="muted">No maintenance logged</p>'}
+      </div>
+    `;
+  } catch (e) { modal.querySelector('.modal').innerHTML = `<div class="error">${e.message}</div>`; }
+};
+window.assignAsset = async function(id, btn) {
+  const m = btn.closest('.modal-backdrop');
+  const user_id = parseInt(m.querySelector('#assign-user').value);
+  if (!user_id) return alert('Pick a user');
+  try {
+    await appApi(`/assets/${id}/assign`, { method: 'POST', body: JSON.stringify({ user_id, notes: m.querySelector('#assign-notes').value }) });
+    m.remove(); showAsset(id);
+  } catch (e) { alert(e.message); }
+};
+window.returnAsset = async function(id, btn) {
+  const m = btn.closest('.modal-backdrop');
+  try {
+    await appApi(`/assets/${id}/return`, { method: 'POST', body: JSON.stringify({ notes: m.querySelector('#return-notes').value }) });
+    m.remove(); showAsset(id);
+  } catch (e) { alert(e.message); }
+};
+window.logMaintenance = async function(id, btn) {
+  const m = btn.closest('.modal-backdrop');
+  const description = m.querySelector('#m-desc').value;
+  if (!description) return alert('Description required');
+  const cost = parseFloat(m.querySelector('#m-cost').value) || 0;
+  try {
+    await appApi(`/assets/${id}/maintenance`, { method: 'POST', body: JSON.stringify({ description, cost }) });
+    m.remove(); showAsset(id);
+  } catch (e) { alert(e.message); }
+};
+
+window.logout = function() { clearAuth(); route(); };
+
+function escapeHtml(s) { return s === null || s === undefined ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatDate(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
+function formatMoney(n) { return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+const state = { page: 1, filters: {} };
+
+function route() {
+  document.getElementById('user-area').innerHTML = '';
+  if (!getCfg()) return renderSetup();
+  if (!getToken()) return renderLogin();
+  renderDashboard();
+}
+route();
+</script>
+</body>
+</html>
