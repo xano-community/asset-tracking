@@ -12,7 +12,7 @@ query "assets" verb=POST {
     text serial_number? filters=trim
     int category_id?
     int location_id?
-    date purchase_date?
+    text purchase_date? filters=trim
     decimal purchase_cost?
   }
 
@@ -37,11 +37,22 @@ query "assets" verb=POST {
         serial_number : $input.serial_number,
         category_id   : $input.category_id,
         location_id   : $input.location_id,
-        purchase_date : $input.purchase_date,
         purchase_cost : $input.purchase_cost,
         status        : "available"
       }
     } as $asset
+
+    // purchase_date is set in a follow-up patch: referencing an omitted
+    // optional date input faults at runtime, so it must not appear in db.add.
+    conditional {
+      if (($input.purchase_date|strlen) > 0) {
+        db.patch "asset" {
+          field_name = "id"
+          field_value = $asset.id
+          data = {purchase_date: $input.purchase_date}
+        } as $asset
+      }
+    }
   }
 
   response = $asset

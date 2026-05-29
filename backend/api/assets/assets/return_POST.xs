@@ -20,7 +20,8 @@ query "assets/{asset_id}/return" verb=POST {
     }
 
     db.query "asset_assignment" {
-      where = $db.asset_assignment.asset_id == $input.asset_id && $db.asset_assignment.returned_at == null
+      where = $db.asset_assignment.asset_id == $input.asset_id && ($db.asset_assignment.returned_at == null || $db.asset_assignment.returned_at == 0)
+      sort = {assigned_at: "desc"}
       return = {type: "single"}
     } as $active_assignment
 
@@ -42,7 +43,7 @@ query "assets/{asset_id}/return" verb=POST {
       field_value = $input.asset_id
       data = {
         status     : "available",
-        assigned_to: null,
+        assigned_to: 0,
         updated_at : now
       }
     } as $updated_asset
