@@ -39,7 +39,7 @@ curl -X POST https://YOUR-INSTANCE.n7d.xano.io/api:asset-tracking/seed \
   -d '{}' -H 'Content-Type: application/json'
 ```
 
-Creates 8 users, 7 categories, 5 locations, 20 assets spanning laptops, phones, monitors, servers, network gear — with realistic statuses (available, assigned, in_repair, retired) and active assignments linking assets to users. All seeded users share password `DemoPass1` (emails `alice.johnson@acme.enterprise` through `henry.tanaka@acme.enterprise`). Idempotent.
+Creates 8 users, 7 categories, 5 locations, 20 assets spanning laptops, phones, monitors, servers, network gear — with realistic statuses (available, assigned, in_repair, retired) and active assignments linking assets to users. All seeded users share password `DemoPass1` (emails `alice.johnson@acme.enterprise` through `henry.tanaka@acme.enterprise`). Re-running returns an error if data is already present (the data will not be duplicated).
 
 ### 3. Run the frontend
 
