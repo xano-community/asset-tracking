@@ -155,7 +155,6 @@ table user {
 }
 ---
 api_group Assets {
-  canonical = "asset-tracking"
   description = "Asset Tracking - Enterprise IT asset management"
   tags = ["assets", "inventory", "it"]
 }
@@ -805,7 +804,6 @@ query "stats/dashboard" verb=GET {
 }
 ---
 api_group EnterpriseAuth {
-  canonical = "enterprise-auth"
   description = "Shared authentication for HelpDesk Pro, Asset Tracking, and ProcureFlow"
   tags = ["auth", "shared"]
 }
