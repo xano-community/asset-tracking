@@ -8,20 +8,6 @@ Assets (laptops, monitors, phones, servers, network gear) are tagged, categorize
 
 IT teams lose track of hardware the moment it leaves the stockroom — a spreadsheet says a laptop is "assigned to Dana," but Dana left in March and nobody logged the return, and when the device breaks its repair history is scattered across email threads and memory. The cost isn't the missing laptop; it's the absence of a system of record for who has what, since when, and what's been done to it. This template is that record. Every asset is tagged, categorized, and located; every assignment is written with an `assigned_at` / `returned_at` pair, so each device carries a full custody chain; and every repair or upgrade is logged against the asset with its cost. Push it and "where is it and who's responsible?" has an auditable answer instead of a spreadsheet nobody trusts.
 
-## Repo layout
-
-```
-backend/            # XanoScript — push to your Xano workspace
-  workspace/
-  table/            # user, asset, asset_category, location,
-                    # asset_assignment, maintenance_log
-  api/
-    enterprise_auth/  # signup, login, me, users
-    assets/           # assets, categories, locations, stats, seed
-frontend/
-  index.html        # single-file static app
-```
-
 ## Quick start
 
 ### 1. Push the backend to your Xano instance
